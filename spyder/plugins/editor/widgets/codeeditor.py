@@ -2767,13 +2767,16 @@ class CodeEditor(TextEditBaseWidget):
                     self.fix_indent(comment_or_string=cmt_or_str)
                     self.textCursor().endEditBlock()
 
-                    # if left of the cursor is only spaces, remove them (W293)
-                    cursor = self.textCursor()
-                    cursor.setPosition(selection_position[0])
-                    cursor.setPosition(selection_position[1],
-                                       QTextCursor.KeepAnchor)
-                    if len(cursor.selectedText().replace(' ', '')) == 0:
-                        cursor.removeSelectedText()
+                    self.left_line(selection_position)
+
+        elif key in [Qt.Key_Left, Qt.Key_Up, Qt.Key_Right, Qt.Key_Down]:
+            if not event.isAccepted():
+                cursor = self.textCursor()
+                linerange = (cursor.block().position(),
+                             cursor.block().position()
+                             + cursor.block().length() - 1)
+                TextEditBaseWidget.keyPressEvent(self, event)
+                self.left_line(linerange)
 
         elif key == Qt.Key_Insert and not shift and not ctrl:
             self.setOverwriteMode(not self.overwriteMode())
@@ -2884,6 +2887,20 @@ class CodeEditor(TextEditBaseWidget):
         if isinstance(self.highlighter, sh.PygmentsSH):
             self.highlighter.make_charlist()
 
+    def left_line(self, selection_position):
+        """If we left a line with only spaces, remove them (W293)"""
+        cursor = self.textCursor()
+        current_pos = cursor.position()
+        # Chech if still on the line
+        if min(selection_position) <= current_pos and \
+                max(selection_position) >= current_pos:
+            return
+        cursor.setPosition(selection_position[0])
+        cursor.setPosition(selection_position[1],
+                           QTextCursor.KeepAnchor)
+        if len(cursor.selectedText().replace(' ', '')) == 0:
+            cursor.removeSelectedText()
+
     def mouseMoveEvent(self, event):
         """Underline words when pressing <CONTROL>"""
         self.mouse_point = event.pos()
@@ -2967,7 +2984,12 @@ class CodeEditor(TextEditBaseWidget):
             # line, col = cursor.blockNumber(), cursor.columnNumber()
             # if self.enable_hover:
             #     self.request_hover(line, col)
+            cursor = self.textCursor()
+            linerange = (cursor.block().position(),
+                         cursor.block().position()
+                         + cursor.block().length() - 1)
             TextEditBaseWidget.mousePressEvent(self, event)
+            self.left_line(linerange)
 
     def contextMenuEvent(self, event):
         """Reimplement Qt method"""
