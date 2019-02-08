@@ -2753,6 +2753,9 @@ class CodeEditor(TextEditBaseWidget):
                     cursor = self.textCursor()
                     cursor.setPosition(cursor.block().position(),
                                        QTextCursor.KeepAnchor)
+                    selection_position = (
+                            cursor.selectionStart(), cursor.selectionEnd())
+
                     cmt_or_str_line_begin = self.in_comment_or_string(
                                                 cursor=cursor)
 
@@ -2763,6 +2766,15 @@ class CodeEditor(TextEditBaseWidget):
                     TextEditBaseWidget.keyPressEvent(self, event)
                     self.fix_indent(comment_or_string=cmt_or_str)
                     self.textCursor().endEditBlock()
+
+                    # if left of the cursor is only spaces, remove them (W293)
+                    cursor = self.textCursor()
+                    cursor.setPosition(selection_position[0])
+                    cursor.setPosition(selection_position[1],
+                                       QTextCursor.KeepAnchor)
+                    if len(cursor.selectedText().replace(' ', '')) == 0:
+                        cursor.removeSelectedText()
+
         elif key == Qt.Key_Insert and not shift and not ctrl:
             self.setOverwriteMode(not self.overwriteMode())
         elif key == Qt.Key_Backspace and not shift and not ctrl:
