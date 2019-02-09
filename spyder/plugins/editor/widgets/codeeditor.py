@@ -2900,7 +2900,7 @@ class CodeEditor(TextEditBaseWidget):
                            QTextCursor.KeepAnchor)
 
         if not self.in_comment_or_string(cursor=cursor):
-            #remove spaces on the right
+            # remove spaces on the right
             text = cursor.selectedText()
             strip = text.rstrip()
             if text != strip:
