@@ -38,7 +38,6 @@ def get_indent_fix(text, indent_chars=" " * 4, tab_stop_width_spaces=4,
     editor.fix_indent(forward=forward)
     return to_text_string(editor.toPlainText())
 
-
 # ---- Tests
 def test_simple_tuple():
     text = get_indent_fix("this_tuple = (1, 2)\n")

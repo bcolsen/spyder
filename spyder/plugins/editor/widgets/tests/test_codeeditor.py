@@ -56,3 +56,47 @@ def test_editor_lower_to_upper(editorbot):
     widget.transform_to_uppercase()
     new_text = widget.get_text('sof', 'eof')
     assert text != new_text
+
+def test_editor_remove_empty_line(editorbot):
+    qtbot, widget = editorbot
+    text = 'for i in range(2):\n    '
+    widget.set_text(text)
+    cursor = widget.textCursor()
+    cursor.movePosition(QTextCursor.End)
+    widget.setTextCursor(cursor)
+    qtbot.keyPress(widget, Qt.Key_Enter)
+    expected_text = 'for i in range(2):\n\n    '
+    assert widget.toPlainText() == expected_text
+
+def test_editor_remove_trailing_whitespace(editorbot):
+    qtbot, widget = editorbot
+    text = 'myvar = 2 '
+    widget.set_text(text)
+    cursor = widget.textCursor()
+    cursor.movePosition(QTextCursor.End)
+    widget.setTextCursor(cursor)
+    qtbot.keyPress(widget, Qt.Key_Enter)
+    expected_text = 'myvar = 2\n'
+    assert widget.toPlainText() == expected_text
+
+def test_editor_remove_trailing_whitespace_up(editorbot):
+    qtbot, widget = editorbot
+    text = 'somecode = 1\nmyvar = 2 '
+    widget.set_text(text)
+    cursor = widget.textCursor()
+    cursor.movePosition(QTextCursor.End)
+    widget.setTextCursor(cursor)
+    qtbot.keyPress(widget, Qt.Key_Up)
+    expected_text = 'somecode = 1\nmyvar = 2'
+    assert widget.toPlainText() == expected_text
+
+def test_editor_keep_string_empty_line(editorbot):
+    qtbot, widget = editorbot
+    text = '"""This is a string with important spaces\n    '
+    widget.set_text(text)
+    cursor = widget.textCursor()
+    cursor.movePosition(QTextCursor.End)
+    widget.setTextCursor(cursor)
+    qtbot.keyPress(widget, Qt.Key_Enter)
+    expected_text = '"""This is a string with important spaces\n    \n'
+    assert widget.toPlainText() == expected_text

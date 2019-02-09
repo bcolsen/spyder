@@ -2898,8 +2898,15 @@ class CodeEditor(TextEditBaseWidget):
         cursor.setPosition(selection_position[0])
         cursor.setPosition(selection_position[1],
                            QTextCursor.KeepAnchor)
-        if len(cursor.selectedText().replace(' ', '')) == 0:
-            cursor.removeSelectedText()
+
+        if not self.in_comment_or_string(cursor=cursor):
+            #remove spaces on the right
+            text = cursor.selectedText()
+            strip = text.rstrip()
+            if text != strip:
+                cursor.removeSelectedText()
+                cursor.insertText(strip)
+                self.document_did_change()
 
     def mouseMoveEvent(self, event):
         """Underline words when pressing <CONTROL>"""
