@@ -2888,12 +2888,13 @@ class CodeEditor(TextEditBaseWidget):
             self.highlighter.make_charlist()
 
     def left_line(self, selection_position):
-        """If we left a line with only spaces, remove them (W293)"""
+        """Remove whitespace if we left a line with trailing whitespace,
+        and that we where not in a comment or string."""
         cursor = self.textCursor()
         current_pos = cursor.position()
         # Chech if still on the line
-        if min(selection_position) <= current_pos and \
-                max(selection_position) >= current_pos:
+        if (min(selection_position) <= current_pos and
+                max(selection_position) >= current_pos):
             return
         cursor.setPosition(selection_position[0])
         cursor.setPosition(selection_position[1],

@@ -45,6 +45,7 @@ def test_editor_upper_to_lower(editorbot):
     new_text = widget.get_text('sof', 'eof')
     assert text != new_text
 
+
 def test_editor_lower_to_upper(editorbot):
     qtbot, widget = editorbot
     text = 'uppercase'
@@ -57,46 +58,56 @@ def test_editor_lower_to_upper(editorbot):
     new_text = widget.get_text('sof', 'eof')
     assert text != new_text
 
-def test_editor_remove_empty_line(editorbot):
+
+@pytest.mark.parametrize("input_text, expected_text, keypress",
+                         [('for i in range(2):\n    ',
+                           'for i in range(2):\n\n    ',
+                           Qt.Key_Enter),
+                          ('myvar = 2 ',
+                           'myvar = 2\n',
+                           Qt.Key_Enter),
+                          ('somecode = 1\nmyvar = 2 ',
+                           'somecode = 1\nmyvar = 2',
+                           Qt.Key_Up),
+                          ('somecode = 1\nmyvar = 2 ',
+                           'somecode = 1\nmyvar = 2 ',
+                           Qt.Key_Left),
+                          ('"""This is a string with important spaces\n    ',
+                           '"""This is a string with important spaces\n    \n',
+                           Qt.Key_Enter)
+                          ])
+def test_editor_rstrip_keypress(
+        editorbot, input_text, expected_text, keypress):
+    """Remove whitespace if we left a line with trailing whitespace
+    by keypress,"""
     qtbot, widget = editorbot
-    text = 'for i in range(2):\n    '
-    widget.set_text(text)
+    widget.set_text(input_text)
     cursor = widget.textCursor()
     cursor.movePosition(QTextCursor.End)
     widget.setTextCursor(cursor)
-    qtbot.keyPress(widget, Qt.Key_Enter)
-    expected_text = 'for i in range(2):\n\n    '
+    qtbot.keyPress(widget, keypress)
     assert widget.toPlainText() == expected_text
 
-def test_editor_remove_trailing_whitespace(editorbot):
-    qtbot, widget = editorbot
-    text = 'myvar = 2 '
-    widget.set_text(text)
-    cursor = widget.textCursor()
-    cursor.movePosition(QTextCursor.End)
-    widget.setTextCursor(cursor)
-    qtbot.keyPress(widget, Qt.Key_Enter)
-    expected_text = 'myvar = 2\n'
-    assert widget.toPlainText() == expected_text
 
-def test_editor_remove_trailing_whitespace_up(editorbot):
+@pytest.mark.parametrize("input_text, expected_text, position",
+                         [('somecode = 1\nmyvar = 2 ',
+                           'somecode = 1\nmyvar = 2',
+                           0),
+                          ('somecode = 1\nmyvar = 2 ',
+                           'somecode = 1\nmyvar = 2 ',
+                           23)
+                          ])
+def test_editor_rstrip_mousepress(
+        editorbot, input_text, expected_text, position):
+    """Remove whitespace if we left a line with trailing whitespace
+    by mouseclick,"""
     qtbot, widget = editorbot
-    text = 'somecode = 1\nmyvar = 2 '
-    widget.set_text(text)
+    widget.set_text(input_text)
     cursor = widget.textCursor()
     cursor.movePosition(QTextCursor.End)
     widget.setTextCursor(cursor)
-    qtbot.keyPress(widget, Qt.Key_Up)
-    expected_text = 'somecode = 1\nmyvar = 2'
-    assert widget.toPlainText() == expected_text
-
-def test_editor_keep_string_empty_line(editorbot):
-    qtbot, widget = editorbot
-    text = '"""This is a string with important spaces\n    '
-    widget.set_text(text)
     cursor = widget.textCursor()
-    cursor.movePosition(QTextCursor.End)
-    widget.setTextCursor(cursor)
-    qtbot.keyPress(widget, Qt.Key_Enter)
-    expected_text = '"""This is a string with important spaces\n    \n'
+    cursor.setPosition(position)
+    pos = widget.cursorRect(cursor).center()
+    qtbot.mouseClick(widget, Qt.LeftButton, pos=pos, delay=300)
     assert widget.toPlainText() == expected_text
