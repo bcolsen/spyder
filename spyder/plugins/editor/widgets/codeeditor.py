@@ -2751,10 +2751,7 @@ class CodeEditor(TextEditBaseWidget):
 
                     # Check if the line start with a comment or string
                     cursor = self.textCursor()
-                    cursor.setPosition(cursor.block().position(),
-                                       QTextCursor.KeepAnchor)
-                    selection_position = (
-                            cursor.selectionStart(), cursor.selectionEnd())
+                    position = cursor.position()
 
                     cmt_or_str_line_begin = self.in_comment_or_string(
                                                 cursor=cursor)
@@ -2767,16 +2764,13 @@ class CodeEditor(TextEditBaseWidget):
                     self.fix_indent(comment_or_string=cmt_or_str)
                     self.textCursor().endEditBlock()
 
-                    self.left_line(selection_position)
+                    self.left_line(position, key)
 
         elif key in [Qt.Key_Left, Qt.Key_Up, Qt.Key_Right, Qt.Key_Down]:
             if not event.isAccepted():
-                cursor = self.textCursor()
-                linerange = (cursor.block().position(),
-                             cursor.block().position()
-                             + cursor.block().length() - 1)
+                position = self.textCursor().position()
                 TextEditBaseWidget.keyPressEvent(self, event)
-                self.left_line(linerange)
+                self.left_line(position, key)
 
         elif key == Qt.Key_Insert and not shift and not ctrl:
             self.setOverwriteMode(not self.overwriteMode())
@@ -2887,17 +2881,24 @@ class CodeEditor(TextEditBaseWidget):
         if isinstance(self.highlighter, sh.PygmentsSH):
             self.highlighter.make_charlist()
 
-    def left_line(self, selection_position):
-        """Remove whitespace if we left a line with trailing whitespace,
-        and that we where not in a comment or string."""
+    def left_line(self, position, source=None):
+        """Process a line at position 'position' on leaving it.
+
+        Remove trailing whitespace on leaving a non-string line containing it.
+        This could also do other processing in the future based on the button
+        pressed ('source') or settings."""
         cursor = self.textCursor()
         current_pos = cursor.position()
+        cursor.setPosition(position)
+        line_range = (cursor.block().position(),
+                      cursor.block().position()
+                      + cursor.block().length() - 1)
         # Chech if still on the line
-        if (min(selection_position) <= current_pos and
-                max(selection_position) >= current_pos):
+        if (min(line_range) <= current_pos and
+                max(line_range) >= current_pos):
             return
-        cursor.setPosition(selection_position[0])
-        cursor.setPosition(selection_position[1],
+        cursor.setPosition(line_range[0])
+        cursor.setPosition(line_range[1],
                            QTextCursor.KeepAnchor)
 
         if not self.in_comment_or_string(cursor=cursor):
@@ -2992,12 +2993,9 @@ class CodeEditor(TextEditBaseWidget):
             # line, col = cursor.blockNumber(), cursor.columnNumber()
             # if self.enable_hover:
             #     self.request_hover(line, col)
-            cursor = self.textCursor()
-            linerange = (cursor.block().position(),
-                         cursor.block().position()
-                         + cursor.block().length() - 1)
+            position = self.textCursor().position()
             TextEditBaseWidget.mousePressEvent(self, event)
-            self.left_line(linerange)
+            self.left_line(position, event.button())
 
     def contextMenuEvent(self, event):
         """Reimplement Qt method"""

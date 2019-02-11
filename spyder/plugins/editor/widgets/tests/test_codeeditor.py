@@ -78,8 +78,8 @@ def test_editor_lower_to_upper(editorbot):
                           ])
 def test_editor_rstrip_keypress(
         editorbot, input_text, expected_text, keypress):
-    """Remove whitespace if we left a line with trailing whitespace
-    by keypress,"""
+    """Test that whitespace is removed when leaving a line with it by keypress.
+    """
     qtbot, widget = editorbot
     widget.set_text(input_text)
     cursor = widget.textCursor()
@@ -99,8 +99,7 @@ def test_editor_rstrip_keypress(
                           ])
 def test_editor_rstrip_mousepress(
         editorbot, input_text, expected_text, position):
-    """Remove whitespace if we left a line with trailing whitespace
-    by mouseclick,"""
+    """Test that whitespace is removed when leaving a line by mouseclick."""
     qtbot, widget = editorbot
     widget.set_text(input_text)
     cursor = widget.textCursor()
