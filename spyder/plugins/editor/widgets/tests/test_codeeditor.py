@@ -5,9 +5,9 @@
 #
 
 # Third party imports
-from qtpy.QtCore import Qt
-from qtpy.QtGui import QFont, QTextCursor
-                            
+from qtpy.QtCore import Qt, QEvent
+from qtpy.QtGui import QFont, QTextCursor, QMouseEvent
+
 from pytestqt import qtbot
 import pytest
 
@@ -109,5 +109,7 @@ def test_editor_rstrip_mousepress(
     cursor = widget.textCursor()
     cursor.setPosition(position)
     pos = widget.cursorRect(cursor).center()
-    qtbot.mouseClick(widget, Qt.LeftButton, pos=pos, delay=300)
+    widget.mousePressEvent(QMouseEvent(QEvent.MouseButtonPress, pos,
+                                       Qt.LeftButton, Qt.LeftButton,
+                                       Qt.NoModifier))
     assert widget.toPlainText() == expected_text
