@@ -451,6 +451,7 @@ class CodeEditor(TextEditBaseWidget):
                                        lambda value: self.rehighlight_cells())
 
         self.oe_proxy = None
+        self.last_change_position = None
 
         # Language Server
         self.lsp_requests = {}
@@ -1292,6 +1293,7 @@ class CodeEditor(TextEditBaseWidget):
 
     def __text_has_changed(self):
         """Text has changed, eventually clear found results highlighting"""
+        self.last_change_position = self.textCursor().position()
         if self.found_results:
             self.clear_found_results()
 
@@ -2764,13 +2766,13 @@ class CodeEditor(TextEditBaseWidget):
                     self.fix_indent(comment_or_string=cmt_or_str)
                     self.textCursor().endEditBlock()
 
-                    self.left_line(position, key)
+                    self.left_line(position, source_button=key)
 
         elif key in [Qt.Key_Left, Qt.Key_Up, Qt.Key_Right, Qt.Key_Down]:
             if not event.isAccepted():
                 position = self.textCursor().position()
                 TextEditBaseWidget.keyPressEvent(self, event)
-                self.left_line(position, key)
+                self.left_line(position, source_button=key)
 
         elif key == Qt.Key_Insert and not shift and not ctrl:
             self.setOverwriteMode(not self.overwriteMode())
@@ -2881,34 +2883,62 @@ class CodeEditor(TextEditBaseWidget):
         if isinstance(self.highlighter, sh.PygmentsSH):
             self.highlighter.make_charlist()
 
-    def left_line(self, position, source=None):
+    def left_line(self, position, source_button):
         """Process a line at position 'position' on leaving it.
 
         Remove trailing whitespace on leaving a non-string line containing it.
         This could also do other processing in the future based on the button
         pressed ('source') or settings."""
+
+        # Get current position
         cursor = self.textCursor()
         current_pos = cursor.position()
+
+        # Chech if still on the line
         cursor.setPosition(position)
         line_range = (cursor.block().position(),
                       cursor.block().position()
                       + cursor.block().length() - 1)
-        # Chech if still on the line
-        if (min(line_range) <= current_pos and
-                max(line_range) >= current_pos):
+
+        def pos_in_line(pos):
+            if pos is None:
+                return False
+            return pos >= line_range[0] and pos <= line_range[1]
+
+        if pos_in_line(current_pos):
             return
+
+        # Check if end of line in comment or string
+        cursor.setPosition(line_range[1])
+        if self.in_comment_or_string(cursor=cursor):
+            return
+
+        # We should process if:
+        shouldProcess = False
+        if source_button in (Qt.Key_Enter, Qt.Key_Return):
+            # Pressed enter (There is a change on that line)
+            shouldProcess = True
+        elif source_button in [Qt.Key_Left, Qt.Key_Up, Qt.Key_Right,
+                               Qt.Key_Down, Qt.LeftButton]:
+            # Move away and last change was on that line
+            if pos_in_line(self.last_change_position):
+                shouldProcess = True
+
+        if not shouldProcess:
+            return
+
         cursor.setPosition(line_range[0])
         cursor.setPosition(line_range[1],
                            QTextCursor.KeepAnchor)
-
-        if not self.in_comment_or_string(cursor=cursor):
-            # remove spaces on the right
-            text = cursor.selectedText()
-            strip = text.rstrip()
-            if text != strip:
-                cursor.removeSelectedText()
-                cursor.insertText(strip)
-                self.document_did_change()
+        # remove spaces on the right
+        text = cursor.selectedText()
+        strip = text.rstrip()
+        if text != strip:
+            cursor.removeSelectedText()
+            cursor.insertText(strip)
+            self.document_did_change()
+            # Correct last change position
+            self.last_change_position = line_range[1]
 
     def mouseMoveEvent(self, event):
         """Underline words when pressing <CONTROL>"""
@@ -2995,7 +3025,7 @@ class CodeEditor(TextEditBaseWidget):
             #     self.request_hover(line, col)
             position = self.textCursor().position()
             TextEditBaseWidget.mousePressEvent(self, event)
-            self.left_line(position, event.button())
+            self.left_line(position, source_button=event.button())
 
     def contextMenuEvent(self, event):
         """Reimplement Qt method"""

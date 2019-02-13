@@ -59,56 +59,54 @@ def test_editor_lower_to_upper(editorbot):
     assert text != new_text
 
 
-@pytest.mark.parametrize("input_text, expected_text, keypress",
-                         [('for i in range(2):\n    ',
-                           'for i in range(2):\n\n    ',
-                           Qt.Key_Enter),
-                          ('myvar = 2 ',
-                           'myvar = 2\n',
-                           Qt.Key_Enter),
-                          ('somecode = 1\nmyvar = 2 ',
-                           'somecode = 1\nmyvar = 2',
-                           Qt.Key_Up),
-                          ('somecode = 1\nmyvar = 2 ',
-                           'somecode = 1\nmyvar = 2 ',
-                           Qt.Key_Left),
-                          ('"""This is a string with important spaces\n    ',
-                           '"""This is a string with important spaces\n    \n',
-                           Qt.Key_Enter)
-                          ])
+@pytest.mark.parametrize(
+        "input_text, expected_text, keys",
+             [
+              ('for i in range(2):\n    ',
+               'for i in range(2):\n\n    ',
+               [Qt.Key_Enter]),
+              ('myvar = 2 ',
+               'myvar = 2\n',
+               [Qt.Key_Enter]),
+              ('somecode = 1\nmyvar = 2 \nmyvar = 3',
+               'somecode = 1\nmyvar = 2 \nmyvar = 3',
+               [' ', Qt.Key_Up, Qt.Key_Up]),
+              ('somecode = 1\nmyvar = 2 ',
+               'somecode = 1\nmyvar = 2 ',
+               [Qt.Key_Left]),
+              ('"""This is a string with important spaces\n    ',
+               '"""This is a string with important spaces\n    \n',
+               [Qt.Key_Enter]),
+              ('somecode = 1\nmyvar = 2',
+               'somecode = 1\nmyvar = 2',
+               [' ', (Qt.LeftButton, 0)]),
+              ('somecode = 1\nmyvar = 2',
+               'somecode = 1\nmyvar = 2 ',
+               [' ', (Qt.LeftButton, 23)]),
+              ('a=1\na=2 \na=3',
+               'a=1\na=2 \na=3',
+               [(Qt.LeftButton, 6), Qt.Key_Up]),
+              ])
 def test_editor_rstrip_keypress(
-        editorbot, input_text, expected_text, keypress):
-    """Test that whitespace is removed when leaving a line with it by keypress.
+        editorbot, input_text, expected_text, keys):
+    """Test that whitespace is removed when leaving a line.
     """
     qtbot, widget = editorbot
     widget.set_text(input_text)
     cursor = widget.textCursor()
     cursor.movePosition(QTextCursor.End)
     widget.setTextCursor(cursor)
-    qtbot.keyPress(widget, keypress)
-    assert widget.toPlainText() == expected_text
-
-
-@pytest.mark.parametrize("input_text, expected_text, position",
-                         [('somecode = 1\nmyvar = 2 ',
-                           'somecode = 1\nmyvar = 2',
-                           0),
-                          ('somecode = 1\nmyvar = 2 ',
-                           'somecode = 1\nmyvar = 2 ',
-                           23)
-                          ])
-def test_editor_rstrip_mousepress(
-        editorbot, input_text, expected_text, position):
-    """Test that whitespace is removed when leaving a line by mouseclick."""
-    qtbot, widget = editorbot
-    widget.set_text(input_text)
-    cursor = widget.textCursor()
-    cursor.movePosition(QTextCursor.End)
-    widget.setTextCursor(cursor)
-    cursor = widget.textCursor()
-    cursor.setPosition(position)
-    pos = widget.cursorRect(cursor).center()
-    widget.mousePressEvent(QMouseEvent(QEvent.MouseButtonPress, pos,
-                                       Qt.LeftButton, Qt.LeftButton,
-                                       Qt.NoModifier))
+    for key in keys:
+        if isinstance(key, tuple):
+            # Mouse event
+            button, position = key
+            cursor = widget.textCursor()
+            cursor.setPosition(position)
+            xypos = widget.cursorRect(cursor).center()
+            widget.mousePressEvent(QMouseEvent(
+                    QEvent.MouseButtonPress, xypos,
+                    button, button,
+                    Qt.NoModifier))
+        else:
+            qtbot.keyPress(widget, key)
     assert widget.toPlainText() == expected_text
