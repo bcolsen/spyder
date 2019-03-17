@@ -2900,20 +2900,33 @@ class CodeEditor(TextEditBaseWidget):
         """
         Check if last_position is on the same line as the current position
         """
-        if self.last_position is None:
-            return False
         # Get current position
         cursor = self.textCursor()
         current_pos = cursor.position()
 
         # Check if still on the line
+        line_range = self.last_line_range()
+        if line_range is None:
+            # Doesn't apply
+            return False
+        same_line = line_range[0] <= current_pos <= line_range[1]
+
+        return not same_line
+
+    def last_line_range(self):
+        """
+        Get current range from last line
+        """
+        if self.last_position is None:
+            return None
+        # Check if still on the line
+        cursor = self.textCursor()
         cursor.setPosition(self.last_position)
         line_range = (cursor.block().position(),
                       cursor.block().position()
                       + cursor.block().length() - 1)
+        return line_range
 
-        same_line = line_range[0] <= current_pos <= line_range[1]
-        return not same_line
 
     def strip_trailing_spaces(self):
         """
@@ -2923,11 +2936,9 @@ class CodeEditor(TextEditBaseWidget):
         """
 
         # Get last line range
-        cursor = self.textCursor()
-        cursor.setPosition(self.last_position)
-        line_range = (cursor.block().position(),
-                      cursor.block().position()
-                      + cursor.block().length() - 1)
+        line_range = self.last_line_range()
+        if line_range is None:
+            return
 
         def pos_in_line(pos):
             if pos is None:
@@ -2935,6 +2946,7 @@ class CodeEditor(TextEditBaseWidget):
             return line_range[0] <= pos <= line_range[1]
 
         # Check if end of line in comment or string
+        cursor = self.textCursor()
         cursor.setPosition(line_range[1])
         if self.in_comment_or_string(cursor=cursor):
             return
