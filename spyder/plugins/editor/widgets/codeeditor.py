@@ -2899,8 +2899,7 @@ class CodeEditor(TextEditBaseWidget):
                       cursor.block().position()
                       + cursor.block().length() - 1)
 
-        same_line = (current_pos >= line_range[0] and
-                     current_pos <= line_range[1])
+        same_line = line_range[0] <= current_pos <= line_range[1]
         return not same_line
 
     def strip_trailing_spaces(self):
@@ -2920,23 +2919,16 @@ class CodeEditor(TextEditBaseWidget):
         def pos_in_line(pos):
             if pos is None:
                 return False
-            return pos >= line_range[0] and pos <= line_range[1]
+            return line_range[0] <= pos <= line_range[1]
 
         # Check if end of line in comment or string
         cursor.setPosition(line_range[1])
         if self.in_comment_or_string(cursor=cursor):
             return
 
-        # We should process if:
-        if self.last_input in (Qt.Key_Enter, Qt.Key_Return):
-            # Pressed enter (There is a change on that line)
-            pass
-
-        elif pos_in_line(self.last_change_position):
-            # Move away and last change was on that line
-            pass
-
-        else:
+        # We should process if we pressed return or made a change on the line:
+        if not (pos_in_line(self.last_change_position) or
+                self.last_input in (Qt.Key_Enter, Qt.Key_Return)):
             return
 
         cursor.setPosition(line_range[0])
