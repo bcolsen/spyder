@@ -7,6 +7,7 @@
 # Standard library imports
 import os
 import os.path as osp
+import mimetypes as mime
 import sys
 
 # Third party imports
@@ -17,6 +18,7 @@ from qtpy.QtWidgets import QStyle, QWidget
 from spyder.config.base import get_image_path
 from spyder.config.main import CONF
 from spyder.config.gui import is_dark_interface
+from spyder.py3compat import to_text_string
 import qtawesome as qta
 
 
@@ -24,6 +26,23 @@ if is_dark_interface():
     MAIN_FG_COLOR = 'white'
 else:
     MAIN_FG_COLOR = 'black'
+
+BIN_FILES = {x: 'ArchiveFileIcon' for x in ['zip', 'x-tar',
+                                            'x-7z-compressed', 'rar']}
+
+DOCUMENT_FILES = {'vnd.ms-powerpoint': 'PowerpointFileIcon',
+                  'vnd.openxmlformats-officedocument.'
+                  'presentationml.presentation': 'PowerpointFileIcon',
+                  'msword': 'WordFileIcon',
+                  'vnd.openxmlformats-officedocument.'
+                  'wordprocessingml.document': 'WordFileIcon',
+                  'vnd.ms-excel': 'ExcelFileIcon',
+                  'vnd.openxmlformats-officedocument.'
+                  'spreadsheetml.sheet': 'ExcelFileIcon',
+                  'pdf': 'PDFIcon'}
+
+OFFICE_FILES = {'.xlsx': 'ExcelFileIcon', '.docx': 'WordFileIcon',
+                '.pptx': 'PowerpointFileIcon'}
 
 # Magnification factors for attribute icons
 # per platform
@@ -114,7 +133,7 @@ _qtaargs = {
     'breakpoint_transparent':  [('fa.circle',), {'color': 'darkred', 'opacity': 0.75, 'scale_factor': 0.9}],
     'breakpoint_big':          [('fa.circle',), {'color': '#cc0000', 'scale_factor': 0.9} ],
     'breakpoint_cond_big':     [('fa.question-circle',), {'color': '#cc0000', 'scale_factor': 0.9},],
-    'arrow_debugger':          [('mdi.arrow-right-thick',), {'color': '#3775a9'}],
+    'arrow_debugger':          [('mdi.arrow-right-bold',), {'color': '#3775a9', 'scale_factor': 2.0}],
     'debug':                   [('spyder.debug',), {'color': '#3775a9'}],
     'arrow-step-over':         [('spyder.step-forward',), {'color': '#3775a9'}],
     'arrow-continue':          [('spyder.continue',), {'color': '#3775a9'}],
@@ -365,7 +384,7 @@ def get_icon(name, default=None, resample=False):
         return icon
 
 
-def icon(name, resample=False, icon_path=None):
+def icon(name, scale_factor=None, resample=False, icon_path=None):
     theme = CONF.get('appearance', 'icon_theme')
     if theme == 'spyder 3':
         if not _resource['loaded']:
@@ -373,6 +392,8 @@ def icon(name, resample=False, icon_path=None):
                           directory=_resource['directory'])
             _resource['loaded'] = True
         args, kwargs = _qtaargs[name]
+        if scale_factor is not None:
+            kwargs['scale_factor'] = scale_factor
         return qta.icon(*args, **kwargs)
     elif theme == 'spyder 2':
         icon = get_icon(name + '.png', resample=resample)
@@ -381,3 +402,56 @@ def icon(name, resample=False, icon_path=None):
             if osp.isfile(icon_path):
                 icon = QIcon(icon_path)
         return icon if icon is not None else QIcon()
+
+
+def get_icon_by_extension(fname, scale_factor):
+    """Return the icon depending on the file extension"""
+    application_icons = {}
+    application_icons.update(BIN_FILES)
+    application_icons.update(DOCUMENT_FILES)
+    if osp.isdir(fname):
+        return icon('DirOpenIcon', scale_factor)
+    else:
+        basename = osp.basename(fname)
+        __, extension = osp.splitext(basename.lower())
+        mime_type, __ = mime.guess_type(basename)
+        icon_by_extension = icon('FileIcon', scale_factor)
+
+        if extension in OFFICE_FILES:
+            icon_by_extension = icon(OFFICE_FILES[extension], scale_factor)
+
+        if extension in LANGUAGE_ICONS:
+            icon_by_extension = icon(LANGUAGE_ICONS[extension], scale_factor)
+        else:
+            if extension == '.ipynb':
+                if is_dark_interface():
+                    icon_by_extension = QIcon(
+                        get_image_path('notebook_dark.svg'))
+                else:
+                    icon_by_extension = QIcon(
+                        get_image_path('notebook_light.svg'))
+            elif mime_type is not None:
+                try:
+                    # Fix for issue 5080. Even though
+                    # mimetypes.guess_type documentation states that
+                    # the return value will be None or a tuple of
+                    # the form type/subtype, in the Windows registry,
+                    # .sql has a mimetype of text\plain
+                    # instead of text/plain therefore mimetypes is
+                    # returning it incorrectly.
+                    file_type, bin_name = mime_type.split('/')
+                except ValueError:
+                    file_type = 'text'
+                if file_type == 'text':
+                    icon_by_extension = icon('TextFileIcon', scale_factor)
+                elif file_type == 'audio':
+                    icon_by_extension = icon('AudioFileIcon', scale_factor)
+                elif file_type == 'video':
+                    icon_by_extension = icon('VideoFileIcon', scale_factor)
+                elif file_type == 'image':
+                    icon_by_extension = icon('ImageFileIcon', scale_factor)
+                elif file_type == 'application':
+                    if bin_name in application_icons:
+                        icon_by_extension = icon(
+                            application_icons[bin_name], scale_factor)
+    return icon_by_extension

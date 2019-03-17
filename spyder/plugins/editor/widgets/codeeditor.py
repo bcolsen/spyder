@@ -220,7 +220,8 @@ class CodeEditor(TextEditBaseWidget):
     indent_guides = None
 
     sig_breakpoints_changed = Signal()
-    sig_debug_stop = Signal(int)
+    sig_debug_stop = Signal((int,), ())
+    sig_debug_start = Signal()
     sig_breakpoints_saved = Signal()
     sig_filename_changed = Signal(str)
     get_completions = Signal(bool)
@@ -478,6 +479,7 @@ class CodeEditor(TextEditBaseWidget):
         self.range_formatting_enabled = False
         self.formatting_characters = []
         self.rename_support = False
+        self.last_completion_position = None
 
         # Editor Extensions
         self.editor_extensions = EditorExtensionsManager(self)
@@ -782,6 +784,7 @@ class CodeEditor(TextEditBaseWidget):
             'line': line,
             'column': column
         }
+        self.last_completion_position = self.textCursor().position()
         return params
 
     @handles(LSPRequestTypes.DOCUMENT_COMPLETION)
@@ -789,7 +792,8 @@ class CodeEditor(TextEditBaseWidget):
         if len(params['params']) > 0:
             completion_list = sorted(
                 params['params'], key=lambda x: x['sortText'])
-            self.completion_widget.show_list(completion_list)
+            position = self.last_completion_position
+            self.completion_widget.show_list(completion_list, position)
 
     # ------------- LSP: Signature Hints ------------------------------------
 
@@ -1498,24 +1502,37 @@ class CodeEditor(TextEditBaseWidget):
     @Slot()
     def paste(self):
         """
+        Insert text or file/folder path copied from clipboard.
+
         Reimplement QPlainTextEdit's method to fix the following issue:
         on Windows, pasted text has only 'LF' EOL chars even if the original
-        text has 'CRLF' EOL chars
+        text has 'CRLF' EOL chars.
+        The function also changes the clipboard data if they are copied as
+        files/folders but does not change normal text data except if they are
+        multiple lines. Since we are changing clipboard data we cannot use
+        paste, which directly pastes from clipboard instead we use
+        insertPlainText and pass the formatted/changed text without modifying
+        clipboard content.
         """
         clipboard = QApplication.clipboard()
-        # This is here to prevent pasting mime data in the Editor.
-        # See issue 8566 for the details.
+        text = to_text_string(clipboard.text())
         if clipboard.mimeData().hasUrls():
-            return
-        else:
-            text = to_text_string(clipboard.text())
-            if len(text.splitlines()) > 1:
-                eol_chars = self.get_line_separator()
-                text = eol_chars.join((text + eol_chars).splitlines())
-                clipboard.setText(text)
-            # Standard paste
-            TextEditBaseWidget.paste(self)
-            self.document_did_change(text)
+            # Have copied file and folder urls pasted as text paths.
+            # See PR: #8644 for details.
+            urls = clipboard.mimeData().urls()
+            if all([url.isLocalFile() for url in urls]):
+                if len(urls) > 1:
+                    sep_chars = ',' + self.get_line_separator()
+                    text = sep_chars.join('"' + url.toLocalFile().
+                                          replace(osp.os.sep, '/')
+                                          + '"' for url in urls)
+                else:
+                    text = urls[0].toLocalFile().replace(osp.os.sep, '/')
+        if len(text.splitlines()) > 1:
+            eol_chars = self.get_line_separator()
+            text = eol_chars.join((text + eol_chars).splitlines())
+        TextEditBaseWidget.insertPlainText(self, text)
+        self.document_did_change(text)
 
     @Slot()
     def undo(self):
@@ -2802,8 +2819,6 @@ class CodeEditor(TextEditBaseWidget):
                     cursor.removeSelectedText()
                 else:
                     TextEditBaseWidget.keyPressEvent(self, event)
-                    if self.is_completion_widget_visible():
-                        self.completion_text = self.completion_text[:-1]
         # elif key == Qt.Key_Period:
         #     self.insert_text(text)
         #     if (self.is_python_like()) and not \
@@ -2867,8 +2882,6 @@ class CodeEditor(TextEditBaseWidget):
             event.accept()
         elif not event.isAccepted():
             TextEditBaseWidget.keyPressEvent(self, event)
-            if self.is_completion_widget_visible() and text:
-                self.completion_text += text
         if len(text) > 0:
             self.document_did_change(text)
             # self.do_completion(automatic=True)
