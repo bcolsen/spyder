@@ -89,7 +89,8 @@ def test_editor_lower_to_upper(editorbot):
               ])
 def test_editor_rstrip_keypress(
         editorbot, input_text, expected_text, keys):
-    """Test that whitespace is removed when leaving a line.
+    """
+    Test that whitespace is removed when leaving a line.
     """
     qtbot, widget = editorbot
     widget.set_text(input_text)
