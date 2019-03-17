@@ -2762,10 +2762,8 @@ class CodeEditor(TextEditBaseWidget):
 
                     # Check if the line start with a comment or string
                     cursor = self.textCursor()
-                    position = cursor.position()
                     cursor.setPosition(cursor.block().position(),
                                        QTextCursor.KeepAnchor)
-
                     cmt_or_str_line_begin = self.in_comment_or_string(
                                                 cursor=cursor)
 
@@ -2776,7 +2774,6 @@ class CodeEditor(TextEditBaseWidget):
                     TextEditBaseWidget.keyPressEvent(self, event)
                     self.fix_indent(comment_or_string=cmt_or_str)
                     self.textCursor().endEditBlock()
-
         elif key == Qt.Key_Insert and not shift and not ctrl:
             self.setOverwriteMode(not self.overwriteMode())
         elif key == Qt.Key_Backspace and not shift and not ctrl:
