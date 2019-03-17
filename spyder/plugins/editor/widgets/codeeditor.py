@@ -2963,7 +2963,7 @@ class CodeEditor(TextEditBaseWidget):
                 return False
             return line_range[0] <= pos <= line_range[1]
 
-        # Check if end of line in comment or string
+        # Check if end of line in string
         cursor = self.textCursor()
         cursor.setPosition(line_range[1])
         if self.in_string(cursor=cursor):
