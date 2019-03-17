@@ -457,7 +457,7 @@ class CodeEditor(TextEditBaseWidget):
         self.last_change_position = None
         self.last_position = None
         self.last_input = None
-        self.no_rstrip = False
+        self.skip_rstrip = False
 
         # Language Server
         self.lsp_requests = {}
@@ -1140,7 +1140,7 @@ class CodeEditor(TextEditBaseWidget):
             # We do the following rather than using self.setPlainText
             # to benefit from QTextEdit's undo/redo feature.
             self.selectAll()
-            self.no_rstrip = True
+            self.skip_rstrip = True
             self.insertPlainText(text_after)
             self.document_did_change()
 
@@ -1197,10 +1197,9 @@ class CodeEditor(TextEditBaseWidget):
         if self.occurrence_highlighting:
             self.occurrence_timer.stop()
             self.occurrence_timer.start()
-        if self.cursor_changed_lines() and not self.no_rstrip:
+        if self.cursor_changed_lines():
             self.strip_trailing_spaces()
         self.last_position = self.textCursor().position()
-        self.no_rstrip = False
 
     def __clear_occurrences(self):
         """Clear occurrence markers"""
@@ -1534,7 +1533,7 @@ class CodeEditor(TextEditBaseWidget):
         if len(text.splitlines()) > 1:
             eol_chars = self.get_line_separator()
             text = eol_chars.join((text + eol_chars).splitlines())
-        self.no_rstrip = True
+        self.skip_rstrip = True
         TextEditBaseWidget.insertPlainText(self, text)
         self.document_did_change(text)
 
@@ -2160,7 +2159,7 @@ class CodeEditor(TextEditBaseWidget):
             # We do the following rather than using self.setPlainText
             # to benefit from QTextEdit's undo/redo feature.
             self.selectAll()
-            self.no_rstrip = True
+            self.skip_rstrip = True
             self.insertPlainText(nbformat.writes(nb))
         except Exception as e:
             QMessageBox.critical(self, _('Removal error'),
@@ -2939,6 +2938,10 @@ class CodeEditor(TextEditBaseWidget):
 
         Remove trailing whitespace on leaving a non-string line containing it.
         """
+
+        if self.skip_rstrip:
+            self.skip_rstrip = False
+            return
 
         # Get last line range
         line_range = self.last_line_range()
