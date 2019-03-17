@@ -2618,10 +2618,21 @@ class CodeEditor(TextEditBaseWidget):
         next_char = to_text_string(cursor.selectedText())
         return next_char
 
-    def in_comment(self):
+    def in_comment(self, cursor=None):
         if self.highlighter:
-            current_color = self.__get_current_color()
+            current_color = self.__get_current_color(cursor)
             comment_color = self.highlighter.get_color_name('comment')
+            if current_color == comment_color:
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    def in_string(self, cursor=None):
+        if self.highlighter:
+            current_color = self.__get_current_color(cursor)
+            comment_color = self.highlighter.get_color_name('string')
             if current_color == comment_color:
                 return True
             else:
@@ -2931,7 +2942,6 @@ class CodeEditor(TextEditBaseWidget):
                       + cursor.block().length() - 1)
         return line_range
 
-
     def strip_trailing_spaces(self):
         """
         Strip trailing spaces if needed
@@ -2956,7 +2966,7 @@ class CodeEditor(TextEditBaseWidget):
         # Check if end of line in comment or string
         cursor = self.textCursor()
         cursor.setPosition(line_range[1])
-        if self.in_comment_or_string(cursor=cursor):
+        if self.in_string(cursor=cursor):
             return
 
         # We should process if we pressed return or made a change on the line:
