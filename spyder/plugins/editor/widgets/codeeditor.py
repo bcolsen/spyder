@@ -2958,7 +2958,7 @@ class CodeEditor(TextEditBaseWidget):
 
     def strip_trailing_spaces(self):
         """
-        Strip trailing spaces if needed
+        Strip trailing spaces if needed.
 
         Remove trailing whitespace on leaving a non-string line containing it.
         """
