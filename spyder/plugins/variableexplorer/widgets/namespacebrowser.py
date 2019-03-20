@@ -356,10 +356,14 @@ class NamespaceBrowser(QWidget):
             filename = self.filename
             if filename is None:
                 filename = getcwd_or_home()
-            filename, _selfilter = getsavefilename(self, _("Save data"),
+            filename, selfilter = getsavefilename(self, _("Save data"),
                                                    filename,
                                                    iofunctions.save_filters)
             if filename:
+                ext = osp.splitext(filename)[1].lower()
+                if not ext:
+                    print(iofunctions.save_filters)
+                    filename += selfilter[selfilter.find('*.') + 1:-1]
                 self.filename = filename
             else:
                 return False
