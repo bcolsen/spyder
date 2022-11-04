@@ -745,7 +745,7 @@ def test_dedicated_consoles(main_window, qtbot):
     # --- Set run options for this file ---
     rc = RunConfiguration().get()
     # A dedicated console is used when these three options are False
-    rc['default'] = rc['current'] = rc['systerm'] = False
+    rc['default'] = rc['current'] = rc['systerm'] = rc['reset_namespace'] = False
     config_entry = (test_file, rc)
     CONF.set('run', 'configurations', [config_entry])
 
@@ -769,8 +769,19 @@ def test_dedicated_consoles(main_window, qtbot):
     # See spyder-ide/spyder#5301.
     text = control.toPlainText()
     assert ('runfile' in text) and not ('Python' in text or 'IPython' in text)
+    
+    # --- Namespace retained after re-execution ---
+    with qtbot.waitSignal(shell.executed):
+        shell.execute('zz = -1')
 
-    # --- Clean namespace after re-execution ---
+    qtbot.keyClick(code_editor, Qt.Key_F5)
+    qtbot.waitUntil(lambda: not shell.is_defined('zz'))
+    assert shell.is_defined('zz')
+
+    # --- Clean namespace after re-execution with reset_namespace ---
+    rc['reset_namespace'] = True
+    config_entry = (test_file, rc)
+    CONF.set('run', 'configurations', [config_entry])
     with qtbot.waitSignal(shell.executed):
         shell.execute('zz = -1')
 
