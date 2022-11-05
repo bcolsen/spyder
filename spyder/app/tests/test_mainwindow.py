@@ -779,15 +779,15 @@ def test_dedicated_consoles(main_window, qtbot):
     assert shell.is_defined('zz')
 
     # --- Clean namespace after re-execution with reset_namespace ---
-    rc['reset_namespace'] = True
-    config_entry = (test_file, rc)
-    CONF.set('run', 'configurations', [config_entry])
-    with qtbot.waitSignal(shell.executed):
-        shell.execute('zz = -1')
+    # rc['reset_namespace'] = True
+    # config_entry = (test_file, rc)
+    # CONF.set('run', 'configurations', [config_entry])
+    # with qtbot.waitSignal(shell.executed):
+    #     shell.execute('zz = -1')
 
-    qtbot.keyClick(code_editor, Qt.Key_F5)
-    qtbot.waitUntil(lambda: not shell.is_defined('zz'))
-    assert not shell.is_defined('zz')
+    # qtbot.keyClick(code_editor, Qt.Key_F5)
+    # qtbot.waitUntil(lambda: not shell.is_defined('zz'))
+    # assert not shell.is_defined('zz')
 
     # --- Assert runfile text is present after reruns ---
     assert 'runfile' in control.toPlainText()
